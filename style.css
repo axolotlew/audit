@@ -1,0 +1,137 @@
+/*
+ * Stylesheet for the classroom schedule web app
+ *
+ * This file defines styles for the overall layout, buttons, form controls
+ * and the schedule table. The colour palette is inspired by the icon
+ * generated for the application. Free slots are tinted green while
+ * occupied slots are tinted red to improve contrast. The table is
+ * horizontally scrollable to accommodate a large number of rooms.
+ */
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen,
+    Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  background-color: #fafafa;
+  color: #333;
+  line-height: 1.4;
+}
+
+header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem;
+  background-color: #f57c00;
+  color: #fff;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+header h1 {
+  font-size: 1.5rem;
+  margin: 0;
+  flex: 1 1 auto;
+}
+
+button {
+  margin-left: 0.5rem;
+  padding: 0.5rem 1rem;
+  font-size: 1rem;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+button.primary {
+  background-color: #1976d2;
+  color: #fff;
+}
+
+button.primary:hover {
+  background-color: #1565c0;
+}
+
+button.secondary {
+  background-color: #c62828;
+  color: #fff;
+}
+
+button.secondary:hover {
+  background-color: #b71c1c;
+}
+
+.controls {
+  display: flex;
+  gap: 1rem;
+  padding: 1rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.controls label {
+  display: flex;
+  align-items: center;
+  font-weight: 500;
+}
+
+.controls select {
+  margin-left: 0.5rem;
+  padding: 0.3rem;
+  font-size: 1rem;
+}
+
+.schedule-container {
+  padding: 1rem;
+  overflow-x: auto;
+}
+
+.schedule-table {
+  border-collapse: collapse;
+  width: 100%;
+  min-width: 600px;
+}
+
+.schedule-table th,
+.schedule-table td {
+  border: 1px solid #ddd;
+  padding: 0.5rem;
+  text-align: center;
+  vertical-align: middle;
+}
+
+.schedule-table th {
+  background-color: #f57c00;
+  color: #fff;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.schedule-table td.free {
+  background-color: #e7f8e7;
+  color: #2e7d32;
+  font-weight: 500;
+}
+
+.schedule-table td.occupied {
+  background-color: #ffebee;
+  color: #c62828;
+}
+
+.schedule-table td.occupied .subject {
+  font-weight: 600;
+}
+
+.schedule-table td.occupied .group {
+  font-size: 0.85rem;
+  color: #555;
+}
+
+.status {
+  padding: 1rem;
+  font-style: italic;
+  color: #666;
+}

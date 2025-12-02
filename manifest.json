@@ -1,11 +1,11 @@
 {
-  "name": "Аудит аудиторий",
-  "short_name": "А.А.",
-  "start_url": "./free_rooms.html",
-  "scope": "./",
+  "name": "Поаудиторное расписание",
+  "short_name": "Расписание",
+  "start_url": ".",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#111827",
+  "background_color": "#fafafa",
+  "theme_color": "#f57c00",
+  "description": "Просмотр расписания занятий по аудиториям с возможностью установки и работы без интернета.",
   "icons": [
     {
       "src": "icon-192.png",
