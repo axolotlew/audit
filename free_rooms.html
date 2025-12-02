@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <title>Свободные аудитории по Excel-расписанию</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <!-- SheetJS для чтения Excel в браузере -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      margin: 0;
+      padding: 0;
+      background: #f5f5f5;
+      color: #222;
+    }
+    header {
+      background: #1f2937;
+      color: #fff;
+      padding: 16px 24px;
+    }
+    header h1 {
+      margin: 0 0 4px;
+      font-size: 20px;
+    }
+    header p {
+      margin: 0;
+      font-size: 13px;
+      opacity: 0.8;
+    }
+    main {
+      max-width: 1200px;
+      margin: 16px auto 32px;
+      padding: 0 16px;
+    }
+    .card {
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.06);
+      padding: 16px 20px;
+      margin-bottom: 16px;
+    }
+    .card h2 {
+      margin-top: 0;
+      font-size: 18px;
+    }
+    .file-input-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+    }
+    input[type="file"] {
+      font-size: 14px;
+    }
+    .status {
+      font-size: 13px;
+      color: #4b5563;
+    }
+    .status.error {
+      color: #b91c1c;
+    }
+    .status.success {
+      color: #15803d;
+    }
+    .tabs {
+      display: flex;
+      gap: 8px;
+      margin-top: 8px;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    .tab {
+      padding: 8px 14px;
+      cursor: pointer;
+      border-radius: 999px 999px 0 0;
+      background: transparent;
+      border: none;
+      font-size: 14px;
+      color: #4b5563;
+    }
+    .tab.active {
+      background: #111827;
+      color: #fff;
+    }
+    .tab-content {
+      margin-top: 12px;
+    }
+    .filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 12px;
+      align-items: center;
+      font-size: 14px;
+    }
+    select {
+      padding: 4px 8px;
+      font-size: 14px;
+      border-radius: 6px;
+      border: 1px solid #d1d5db;
+      background: #fff;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+    th, td {
+      border: 1px solid #e5e7eb;
+      padding: 6px 4px;
+      text-align: center;
+    }
+    th {
+      background: #f3f4f6;
+      font-weight: 600;
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
+    .time-col {
+      background: #f9fafb;
+      font-weight: 600;
+      white-space: nowrap;
+      position: sticky;
+      left: 0;
+      z-index: 2;
+    }
+    .cell-busy {
+      background: #fee2e2;
+      color: #b91c1c;
+      font-weight: 600;
+    }
+    .cell-free {
+      background: #dcfce7;
+      color: #166534;
+      font-weight: 500;
+      cursor: pointer;
+    }
+    .cell-free:hover {
+      filter: brightness(0.97);
+    }
+    .tag {
+      display: inline-block;
+      padding: 2px 6px;
+      border-radius: 999px;
+      font-size: 11px;
+      background: #e5e7eb;
+      color: #374151;
+    }
+    .pill {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 12px;
+      background: #111827;
+      color: #fff;
+    }
+    .list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    .list li {
+      padding: 6px 4px;
+      border-bottom: 1px solid #e5e7eb;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+    }
+    .muted {
+      color: #6b7280;
+      font-size: 12px;
+    }
+    .flex {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+    .grow {
+      flex: 1;
+    }
+    .badge {
+      font-size: 11px;
+      padding: 2px 6px;
+      border-radius: 999px;
+      background: #e5e7eb;
+      color: #374151;
+    }
+    .scroll-container {
+      max-height: 500px;
+      overflow: auto;
+      border-radius: 10px;
+      border: 1px solid #e5e7eb;
+    }
+    @media (max-width: 768px) {
+      table {
+        font-size: 11px;
+      }
+      .time-col {
+        position: static;
+      }
+      th {
+        position: static;
+      }
+      .scroll-container {
+        max-height: 400px;
+      }
+    }
+  </style>
+  <link rel="manifest" href="manifest.json">
+<script>
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.register("service-worker.js");
+    });
+  }
+</script>
+
+</head>
+<body>
+<header>
+  <h1>Свободные аудитории (по Excel-расписанию)</h1>
+  <p>Загрузи Excel с расписанием — получишь интерактивный поиск свободных аудиторий, как запись к врачу.</p>
+</header>
+<main>
+  <section class="card">
+    <h2>1. Загрузка расписания</h2>
+    <div class="file-input-container">
+      <input type="file" id="fileInput" accept=".xlsx,.xls" />
+      <span id="status" class="status">Файл ещё не загружен.</span>
+    </div>
+    <p class="muted" style="margin-top:8px;">
+      Ожидается формат с колонками: <strong>Дата</strong>, <strong>Время начала</strong>, <strong>Время окончания</strong>, <strong>День недели</strong>, <strong>Корпус</strong>, <strong>Аудитория</strong> и т.п.
+      Скрипт сам найдёт нужные колонки по названиям.
+    </p>
+  </section>
+
+  <section id="appSection" class="card" style="display:none;">
+    <h2>2. Поиск свободных аудиторий</h2>
+
+    <div class="tabs">
+      <button class="tab active" data-tab="byRoom">По аудитории</button>
+      <button class="tab" data-tab="byTime">По времени</button>
+    </div>
+
+    <div id="tab-byRoom" class="tab-content">
+      <div class="filters">
+        <label>
+          Корпус:
+          <select id="buildingSelect"></select>
+        </label>
+        <label>
+          Аудитория:
+          <select id="roomSelect"></select>
+        </label>
+      </div>
+      <div class="scroll-container">
+        <table id="roomTable"></table>
+      </div>
+      <p class="muted" style="margin-top:6px;">
+        <span class="badge">Зелёный</span> — свободно, <span class="badge">Красный</span> — занято.  
+        Таблица показывает неделю: по горизонтали — дни, по вертикали — пары.
+      </p>
+    </div>
+
+    <div id="tab-byTime" class="tab-content" style="display:none;">
+      <div class="filters">
+        <label>
+          День:
+          <select id="dateSelect"></select>
+        </label>
+        <label>
+          Время:
+          <select id="slotSelect"></select>
+        </label>
+        <span class="muted">→ ниже покажем все свободные аудитории.</span>
+      </div>
+      <ul id="freeRoomsList" class="list"></ul>
+    </div>
+  </section>
+</main>
+
+<script>
+  // ----------------- УТИЛИТЫ ПАРСИНГА -----------------
+
+  function normalizeDate(value) {
+    // Возвращаем:
+    // - key: YYYY-MM-DD
+    // - label: исходная строка
+    if (value instanceof Date) {
+      const y = value.getFullYear();
+      const m = String(value.getMonth() + 1).padStart(2, "0");
+      const d = String(value.getDate()).padStart(2, "0");
+      return { key: `${y}-${m}-${d}`, label: `${d}.${m}.${y}` };
+    }
+    if (typeof value === "number") {
+      // Excel-дата как число
+      const date = XLSX.SSF.parse_date_code(value);
+      if (date) {
+        const y = date.y;
+        const m = String(date.m).padStart(2, "0");
+        const d = String(date.d).padStart(2, "0");
+        return { key: `${y}-${m}-${d}`, label: `${d}.${m}.${y}` };
+      }
+    }
+    const str = String(value || "").trim();
+    const m = str.match(/(\d{1,2})[.\-/](\d{1,2})[.\-/](\d{2,4})/);
+    if (m) {
+      let [ , d, mo, y] = m;
+      if (y.length === 2) y = "20" + y;
+      d = d.padStart(2, "0");
+      mo = mo.padStart(2, "0");
+      const key = `${y}-${mo}-${d}`;
+      const label = `${d}.${mo}.${y}`;
+      return { key, label };
+    }
+    return { key: str || "unknown", label: str || "unknown" };
+  }
+
+  function normalizeTime(value) {
+    // Возвращаем:
+    // - key: HH:MM
+    // - label: HH:MM
+    // - minutes: количество минут с начала суток (для сортировки)
+    if (value instanceof Date) {
+      const h = String(value.getHours()).padStart(2, "0");
+      const m = String(value.getMinutes()).padStart(2, "0");
+      return { key: `${h}:${m}`, label: `${h}:${m}`, minutes: value.getHours() * 60 + value.getMinutes() };
+    }
+    if (typeof value === "number") {
+      // Время как дробь суток
+      const minutes = Math.round(value * 24 * 60);
+      const h = Math.floor(minutes / 60);
+      const m = minutes % 60;
+      const hs = String(h).padStart(2, "0");
+      const ms = String(m).padStart(2, "0");
+      return { key: `${hs}:${ms}`, label: `${hs}:${ms}`, minutes };
+    }
+    const str = String(value || "").trim();
+    const m = str.match(/(\d{1,2}):(\d{2})/);
+    if (m) {
+      let [ , h, mi ] = m;
+      h = h.padStart(2, "0");
+      const minutes = parseInt(h, 10) * 60 + parseInt(mi, 10);
+      return { key: `${h}:${mi}`, label: `${h}:${mi}`, minutes };
+    }
+    return { key: str || "?", label: str || "?", minutes: 0 };
+  }
+
+  function makeBusyKey(dateKey, slotKey, roomKey) {
+    return dateKey + "|" + slotKey + "|" + roomKey;
+  }
+
+  // ----------------- ГЛОБАЛЬНЫЕ ДАННЫЕ -----------------
+
+  let allDates = [];   // [{ key, label, dow }]
+  let allSlots = [];   // [{ key: "HH:MM–HH:MM", start, end }]
+  let allRooms = [];   // [{ key, building, room }]
+  let busySet = new Set(); // Set("date|slot|room")
+  let dateMap = new Map();  // key -> { key, label, dow }
+  let slotMap = new Map();  // key -> slotObj
+  let roomMap = new Map();  // key -> roomObj
+
+  // ----------------- ОСНОВНОЙ ПАРСИНГ EXCEL -----------------
+
+  function parseExcel(workbook) {
+    const sheetName = workbook.SheetNames[0]; // берём первый лист
+    const sheet = workbook.Sheets[sheetName];
+    const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, raw: true });
+
+    if (!rows || !rows.length) {
+      throw new Error("Пустой лист или не удалось прочитать данные.");
+    }
+
+    // Ищем строку заголовков
+    let headerRowIndex = -1;
+    let headerRow = null;
+
+    for (let i = 0; i < Math.min(30, rows.length); i++) {
+      const row = rows[i];
+      if (!row) continue;
+      const hasDate = row.some(cell => String(cell || "").toLowerCase().includes("дата"));
+      const hasStart = row.some(cell => String(cell || "").toLowerCase().includes("время начала"));
+      const hasEnd = row.some(cell => String(cell || "").toLowerCase().includes("время окончания"));
+      const hasRoom = row.some(cell => String(cell || "").toLowerCase().includes("аудит"));
+      if (hasDate && hasStart && hasEnd && hasRoom) {
+        headerRowIndex = i;
+        headerRow = row;
+        break;
+      }
+    }
+
+    if (headerRowIndex === -1) {
+      throw new Error("Не удалось найти строку заголовков (ожидаются колонки 'Дата', 'Время начала', 'Время окончания', 'Аудитория').");
+    }
+
+    // Индексы нужных колонок
+    function findCol(namePart) {
+      const lower = namePart.toLowerCase();
+      for (let i = 0; i < headerRow.length; i++) {
+        const cell = String(headerRow[i] || "").toLowerCase();
+        if (cell.includes(lower)) return i;
+      }
+      return -1;
+    }
+
+    const colDate = findCol("дата");
+    const colStart = findCol("время начала");
+    const colEnd = findCol("время окончания");
+    const colDow = findCol("день недели");
+    const colBuilding = findCol("корпус");
+    const colRoom = findCol("аудит");
+
+    if (colDate === -1 || colStart === -1 || colEnd === -1 || colRoom === -1) {
+      throw new Error("Не хватает обязательных колонок: нужны хотя бы 'Дата', 'Время начала', 'Время окончания', 'Аудитория'.");
+    }
+
+    // Очищаем глобальные структуры
+    allDates = [];
+    allSlots = [];
+    allRooms = [];
+    busySet = new Set();
+    dateMap = new Map();
+    slotMap = new Map();
+    roomMap = new Map();
+
+    // Парсим строки
+    for (let r = headerRowIndex + 1; r < rows.length; r++) {
+      const row = rows[r];
+      if (!row) continue;
+
+      const dateRaw = row[colDate];
+      const startRaw = row[colStart];
+      const endRaw = row[colEnd];
+      const roomRaw = row[colRoom];
+      const buildingRaw = colBuilding !== -1 ? row[colBuilding] : "";
+      const dowRaw = colDow !== -1 ? row[colDow] : "";
+
+      if (!dateRaw || !startRaw || !endRaw || !roomRaw) continue; // пропускаем пустые строки
+
+      const dateNorm = normalizeDate(dateRaw);
+      const startNorm = normalizeTime(startRaw);
+      const endNorm = normalizeTime(endRaw);
+
+      const slotKey = startNorm.key + "–" + endNorm.key;
+      const slotObj = slotMap.get(slotKey) || {
+        key: slotKey,
+        start: startNorm,
+        end: endNorm
+      };
+      if (!slotMap.has(slotKey)) {
+        slotMap.set(slotKey, slotObj);
+      }
+
+      const dateObj = dateMap.get(dateNorm.key) || {
+        key: dateNorm.key,
+        label: dateNorm.label,
+        dow: String(dowRaw || "").trim()
+      };
+      if (!dateMap.has(dateNorm.key)) {
+        dateMap.set(dateNorm.key, dateObj);
+      }
+
+      const building = String(buildingRaw || "").trim() || "Корпус не указан";
+      const room = String(roomRaw || "").trim();
+      const roomKey = building + "|||" + room;
+      const roomObj = roomMap.get(roomKey) || {
+        key: roomKey,
+        building,
+        room
+      };
+      if (!roomMap.has(roomKey)) {
+        roomMap.set(roomKey, roomObj);
+      }
+
+      const busyKey = makeBusyKey(dateObj.key, slotKey, roomKey);
+      busySet.add(busyKey);
+    }
+
+    // Сформируем массивы из карт с сортировкой
+    allDates = Array.from(dateMap.values()).sort((a, b) => a.key.localeCompare(b.key));
+    allSlots = Array.from(slotMap.values()).sort((a, b) => a.start.minutes - b.start.minutes);
+    allRooms = Array.from(roomMap.values()).sort((a, b) => {
+      if (a.building === b.building) return a.room.localeCompare(b.room, "ru");
+      return a.building.localeCompare(b.building, "ru");
+    });
+
+    if (!allDates.length || !allSlots.length || !allRooms.length) {
+      throw new Error("После разбора файла не осталось ни дат, ни пар, ни аудиторий. Проверь структуру файла.");
+    }
+  }
+
+  // ----------------- РЕНДЕРИНГ UI -----------------
+
+  function populateSelects() {
+    // Для "по аудитории"
+    const buildingSelect = document.getElementById("buildingSelect");
+    const roomSelect = document.getElementById("roomSelect");
+
+    // Список корпусов
+    const buildings = Array.from(new Set(allRooms.map(r => r.building))).sort((a, b) => a.localeCompare(b, "ru"));
+    buildingSelect.innerHTML = "";
+    for (const b of buildings) {
+      const opt = document.createElement("option");
+      opt.value = b;
+      opt.textContent = b;
+      buildingSelect.appendChild(opt);
+    }
+
+    function updateRoomSelect() {
+      const building = buildingSelect.value;
+      const roomsInBuilding = allRooms.filter(r => r.building === building);
+      roomSelect.innerHTML = "";
+      for (const r of roomsInBuilding) {
+        const opt = document.createElement("option");
+        opt.value = r.key;
+        opt.textContent = r.room;
+        roomSelect.appendChild(opt);
+      }
+      if (roomsInBuilding.length) {
+        renderRoomTable(building, roomsInBuilding[0].key);
+      } else {
+        document.getElementById("roomTable").innerHTML = "<tr><td>Нет аудиторий для выбранного корпуса.</td></tr>";
+      }
+    }
+
+    buildingSelect.onchange = () => {
+      updateRoomSelect();
+    };
+
+    roomSelect.onchange = () => {
+      const building = buildingSelect.value;
+      const roomKey = roomSelect.value;
+      renderRoomTable(building, roomKey);
+    };
+
+    // Инициализация
+    if (buildings.length) {
+      updateRoomSelect();
+    }
+
+    // Для "по времени"
+    const dateSelect = document.getElementById("dateSelect");
+    const slotSelect = document.getElementById("slotSelect");
+    dateSelect.innerHTML = "";
+    for (const d of allDates) {
+      const opt = document.createElement("option");
+      const label = d.dow ? `${d.label} (${d.dow})` : d.label;
+      opt.value = d.key;
+      opt.textContent = label;
+      dateSelect.appendChild(opt);
+    }
+
+    slotSelect.innerHTML = "";
+    for (const s of allSlots) {
+      const opt = document.createElement("option");
+      opt.value = s.key;
+      opt.textContent = `${s.start.label} – ${s.end.label}`;
+      slotSelect.appendChild(opt);
+    }
+
+    function updateFreeRooms() {
+      const dateKey = dateSelect.value;
+      const slotKey = slotSelect.value;
+      renderFreeRooms(dateKey, slotKey);
+    }
+
+    dateSelect.onchange = updateFreeRooms;
+    slotSelect.onchange = updateFreeRooms;
+
+    updateFreeRooms();
+  }
+
+  function renderRoomTable(building, roomKey) {
+    const table = document.getElementById("roomTable");
+    const roomObj = roomMap.get(roomKey);
+    if (!roomObj) {
+      table.innerHTML = "<tr><td>Не удалось найти выбранную аудиторию.</td></tr>";
+      return;
+    }
+
+    // Заголовок: первый столбец — «Время», дальше — дни
+    let theadHtml = "<tr><th class='time-col'>Пара</th>";
+    for (const d of allDates) {
+      const label = d.dow ? `${d.label}<br><span style="font-weight:normal;">${d.dow}</span>` : d.label;
+      theadHtml += `<th>${label}</th>`;
+    }
+    theadHtml += "</tr>";
+
+    let tbodyHtml = "";
+    for (const slot of allSlots) {
+      const slotKey = slot.key;
+      const slotLabel = `${slot.start.label} – ${slot.end.label}`;
+      tbodyHtml += `<tr><td class="time-col">${slotLabel}</td>`;
+      for (const d of allDates) {
+        const busyKey = makeBusyKey(d.key, slotKey, roomKey);
+        const isBusy = busySet.has(busyKey);
+        if (isBusy) {
+          tbodyHtml += `<td class="cell-busy">занято</td>`;
+        } else {
+          tbodyHtml += `<td class="cell-free" title="Свободно, можно бронировать">свободно</td>`;
+        }
+      }
+      tbodyHtml += "</tr>";
+    }
+
+    table.innerHTML = "<thead>" + theadHtml + "</thead><tbody>" + tbodyHtml + "</tbody>";
+  }
+
+  function renderFreeRooms(dateKey, slotKey) {
+    const list = document.getElementById("freeRoomsList");
+    list.innerHTML = "";
+
+    const dateObj = dateMap.get(dateKey);
+    const slotObj = slotMap.get(slotKey);
+
+    if (!dateObj || !slotObj) {
+      list.innerHTML = "<li>Не удалось определить дату или пару.</li>";
+      return;
+    }
+
+    const freeRooms = [];
+    for (const room of allRooms) {
+      const key = makeBusyKey(dateKey, slotKey, room.key);
+      if (!busySet.has(key)) {
+        freeRooms.push(room);
+      }
+    }
+
+    if (!freeRooms.length) {
+      const li = document.createElement("li");
+      li.textContent = "Свободных аудиторий нет — все заняты в эту пару.";
+      list.appendChild(li);
+      return;
+    }
+
+    for (const room of freeRooms) {
+      const li = document.createElement("li");
+      const left = document.createElement("div");
+      left.className = "grow";
+
+      const title = document.createElement("div");
+      title.innerHTML = `<strong>${room.room}</strong>`;
+
+      const subtitle = document.createElement("div");
+      subtitle.className = "muted";
+      subtitle.textContent = room.building;
+
+      left.appendChild(title);
+      left.appendChild(subtitle);
+
+      const right = document.createElement("div");
+      right.innerHTML = `<span class="pill">свободно</span>`;
+
+      li.appendChild(left);
+      li.appendChild(right);
+      list.appendChild(li);
+    }
+  }
+
+  // ----------------- ТАБЫ -----------------
+
+  document.addEventListener("click", function(e) {
+    const tabBtn = e.target.closest(".tab");
+    if (!tabBtn) return;
+    const tabName = tabBtn.getAttribute("data-tab");
+    if (!tabName) return;
+
+    document.querySelectorAll(".tab").forEach(btn => {
+      btn.classList.toggle("active", btn === tabBtn);
+    });
+
+    document.querySelectorAll(".tab-content").forEach(el => {
+      el.style.display = el.id === "tab-" + tabName ? "block" : "none";
+    });
+  });
+
+  // ----------------- ОБРАБОТКА ФАЙЛА -----------------
+
+  document.getElementById("fileInput").addEventListener("change", function(e) {
+    const file = e.target.files[0];
+    const statusEl = document.getElementById("status");
+    const appSection = document.getElementById("appSection");
+
+    if (!file) {
+      statusEl.textContent = "Файл не выбран.";
+      statusEl.className = "status";
+      appSection.style.display = "none";
+      return;
+    }
+
+    statusEl.textContent = "Читаю файл...";
+    statusEl.className = "status";
+
+    const reader = new FileReader();
+    reader.onload = function(ev) {
+      try {
+        const data = new Uint8Array(ev.target.result);
+        const workbook = XLSX.read(data, { type: "array" });
+        parseExcel(workbook);
+        populateSelects();
+        statusEl.textContent = `Файл загружен: ${file.name}. Найдено дат: ${allDates.length}, пар: ${allSlots.length}, аудиторий: ${allRooms.length}.`;
+        statusEl.className = "status success";
+        appSection.style.display = "block";
+      } catch (err) {
+        console.error(err);
+        statusEl.textContent = "Ошибка: " + err.message;
+        statusEl.className = "status error";
+        appSection.style.display = "none";
+      }
+    };
+    reader.onerror = function() {
+      statusEl.textContent = "Ошибка чтения файла.";
+      statusEl.className = "status error";
+      appSection.style.display = "none";
+    };
+    reader.readAsArrayBuffer(file);
+  });
+</script>
+</body>
+</html>
